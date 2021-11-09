@@ -1,0 +1,155 @@
+//inicializacion de variables
+int dataPin = 4;
+int latchPin = 5;
+int clockPin = 6;
+int ejex = 0;
+int ejey = 0;
+int mode = 0;
+int delayxy = 200;
+int cadena = B00000000;
+int direccion = 0;
+int i = 0;
+
+
+void setup()
+{
+  //inicializacion de pines
+    pinMode(2,INPUT);
+    pinMode(11,INPUT_PULLUP);
+    pinMode(latchPin, OUTPUT);
+    pinMode(dataPin, OUTPUT);
+    pinMode(clockPin, OUTPUT);
+    Serial.begin(9600);
+}
+
+
+void loop()
+{
+  //En función al modo determinado por la pulsacion del boton se ejecutara un codigo u otro
+    if(mode == 1)//modo joystick si el modo es 1
+    {
+        if (direccion == 0)//en funcion a la direccion elejida las luces se orientaran en una direccion o otra
+        {
+            while(i <= 8)//el bucle cambiara el valor de la cadena en binario para encender las luces
+            {
+                cambiodelay();//la funcion detecta cambio en el delay para aplicarlo
+                cambiodireccion();//la funcion detecta el cambio de direccion y finalizara el bucle
+                bitSet(cadena,i);//en la cadena en binario cambia la posicion indicada de 0 a 1(solo puede hacer ese cambio)
+                digitalWrite(latchPin, 0);//Deshabilitamos latch
+                shiftOut(dataPin, clockPin, LSBFIRST,cadena);//introducimos la cadena en binario que encenderan los leds
+                digitalWrite(latchPin, 1);//Habilitamos latch
+                delay (delayxy);//tiempo parado
+                cadena=B00000000;//reseteamos la cadena para que solo encienda una luz por cada vez que recorre el bucle
+                i++;//sumamos uno para cambiar la posición
+                if(digitalRead(11) == LOW)//si detecta una pulsación
+            {
+                mode = 0;//cambia el modo de 1 a 0,no cambia hasta completar la linea de luces
+               // i = 9;
+            }
+            if(direccion == 1){//si antes detecto que la direccion ahora es 1 entonces finaliza la cadena introduciendo el valor i = 9 y empezara la siguiente vez por el otro lado
+                i = 9;
+            }     
+            }
+            i = 0;//reset de el contador i
+            cadena=B00000000;//reset de la cadena
+        }
+        else if(direccion == 1)//si la direccion tiene valor uno
+        {
+          i = 8;//establece a 8 el contador puesto que este va en el orden contrario, en vez de sumar resta
+            while(i >= 0)
+            {
+                cambiodelay();//la funcion detecta cambio en el delay para aplicarlo
+                cambiodireccion();//la funcion detecta el cambio de direccion y finalizara el bucle
+                bitSet(cadena,i);//en la cadena en binario cambia la posicion indicada de 0 a 1(solo puede hacer ese cambio)
+                digitalWrite(latchPin, 0);//Deshabilitamos latch
+                shiftOut(dataPin, clockPin, LSBFIRST,cadena);//introducimos la cadena en binario que encenderan los leds
+                digitalWrite(latchPin, 1);//Habilitamos latch
+                delay (delayxy);//tiempo parado             
+                cadena=B00000000;//reseteamos la cadena para que solo encienda una luz por cada vez que recorre el bucle
+                i--;//restamos uno al contador para cambiar l aposicion
+                if(digitalRead(11) == LOW)//si detecta una pulsación
+            {
+                mode = 0;//cambia el modo de 1 a 0,no cambia hasta completar la linea de luces
+               // i = -1;
+            }
+            if(direccion == 0)//si antes detecto que la direccion ahora es 1 entonces finaliza la cadena introduciendo el valor i = -1 y empezara la siguiente vez por el otro lado
+            {
+                i = -1;
+            }
+            }
+             i = 0; //reset contador i
+             cadena=B00000000;//reset cadena
+        }
+    }
+
+    else if(mode == 0)
+    {
+        //modo sensor pir si es 0
+        if(digitalRead(11) == LOW)//si detecta la pulsacion cambiara de modo de 1 a 0, al modo joystick
+        {
+            mode = 1;
+        }
+            digitalWrite(latchPin, 0);//Deshabilitamos latch
+            shiftOut(dataPin, clockPin, LSBFIRST,B00000000);//introducimos la cadena en binario que apagar los leds, todos 0 para que se apagen todos para que no se quede ninguno encendido.
+            digitalWrite(latchPin, 1);//Habilitamos latch
+        if(digitalRead(2) == HIGH)//si detecta el sensor un movimiento entonces ejecuta el programa
+        {
+            while(i<=5){//lo ejecuta 6 veces para que encienda 3 veces y apage 3 veces.
+                if((i%2)==0){//si es par encendera las luces 
+            digitalWrite(latchPin, 0);//Deshabilitamos latch
+            shiftOut(dataPin, clockPin, LSBFIRST,B11111111);//introducimos la cadena en binario que encenderan los leds, todos 1 para que se enciendan todos
+            digitalWrite(latchPin, 1);//Habilitamos latch
+            delay(100);
+        }
+            else{//si es impar estaran apagadas
+            digitalWrite(latchPin, 0);//Deshabilitamos latch
+            shiftOut(dataPin, clockPin, LSBFIRST,B00000000);//introducimos la cadena en binario que apagar los leds, todos 0 para que se apagen todos
+            digitalWrite(latchPin, 1);//Habilitamos latch
+            delay(100);
+        }
+            i++;//contador suma 
+            if(digitalRead(11) == LOW)//si detecta la pulsacion cambiara de modo de 1 a 0, al modo joystick, incluso sin acabar las pulsaciones
+            {
+                mode = 1;//cambiar modo
+                i = 7;//salir del bucle
+            }
+
+        }
+        i = 0;//reset de contador
+        if(digitalRead(11) == LOW)//si detecta la pulsacion cambiara de modo de 1 a 0, al modo joystick
+            {
+                mode = 1;
+            }
+    }
+}
+}
+
+void cambiodelay()//funcion de subida de delay
+{
+    ejex =analogRead(A0);//lee el valor del el potenciometro
+     if(ejex < 350)//si va al a derecha 
+        {
+            delayxy = delayxy + 100;//suma 100 al delay
+        }
+    else if(ejex > 675)//si va a la izquierda
+        {
+            if(delayxy >= 101){
+                delayxy = delayxy - 100;//restara siempre 100 al delay a no ser q llege a 100 donde lo fijara   
+            }
+            else{delayxy = 100;}
+        }
+}
+
+
+void cambiodireccion()//funcion de cambio de delay
+{
+    ejey =analogRead(A1);
+    if(ejey < 350)//si va a la derecaha
+        {
+            direccion = 1;
+        }
+   else if(ejey > 675)//si va a la izquierda
+        {
+            direccion = 0;
+        }
+}
